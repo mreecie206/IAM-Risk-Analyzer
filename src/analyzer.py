@@ -1,43 +1,57 @@
-from typing import Dict
+# src/analyzer.py
 
-from .models import IdentityConfig
-from .rules_engine import evaluate_risks
-from .scoring import compute_risk_score, categorize_risk
-from .reports import (
-    generate_executive_summary,
-    generate_technical_report,
-    generate_top_risks,
-)
+from __future__ import annotations
+
+import json
+from typing import Any, Dict, List
+
+from src.rules_engine import RulesEngine, RuleResult
+from src.models import Finding, Severity
+from src.reports import RiskReport
 
 
-def run_identity_risk_analyzer(config: IdentityConfig) -> Dict[str, object]:
+class Analyzer:
     """
-    Main entry point for the Identity Risk Analyzer.
-
-    Takes an IdentityConfig, evaluates risks, computes a score,
-    and returns structured outputs for use in CLI/UI.
+    Central analyzer that runs the RulesEngine against IAM configuration
+    and produces structured risk reports.
     """
 
-    # 1. Evaluate deterministic IAM risk rules
-    findings = evaluate_risks(config)
+    def __init__(self, rules_engine: RulesEngine | None = None) -> None:
+        self.rules_engine = rules_engine or RulesEngine()
 
-    # 2. Compute numeric risk score
-    score = compute_risk_score(findings)
-    category = categorize_risk(score)
+    def analyze(self, iam_config: Dict[str, Any]) -> RiskReport:
+        """
+        Run the rules engine against IAM config and return a RiskReport.
+        """
+        results: List[RuleResult] = self.rules_engine.evaluate(iam_config)
 
-    # 3. Generate reports
-    executive_summary = generate_executive_summary(score, findings)
-    technical_report = generate_technical_report(findings)
-    top_risks = generate_top_risks(findings)
+        all_findings: List[Finding] = []
+        for result in results:
+            all_findings.extend(result.findings)
 
-    # 4. Return a structured result object
-    return {
-        "risk_score": score,
-        "risk_category": category,
-        "findings": findings,
-        "top_risks": top_risks,
-        "executive_summary": executive_summary,
-        "technical_report": technical_report,
-    }
+        # Aggregate severity counts
+        by_severity: Dict[Severity, int] = {}
+        for f in all_findings:
+            by_severity[f.severity] = by_severity.get(f.severity, 0) + 1
 
+        # Aggregate NIST function counts
+        by_nist: Dict[str, int] = {}
+        for f in all_findings:
+            by_nist[f.nist_function] = by_nist.get(f.nist_function, 0) + 1
 
+        total_score = sum(f.score for f in all_findings)
+
+        return RiskReport(
+            total_score=round(total_score, 2),
+            findings=all_findings,
+            by_severity=by_severity,
+            by_nist_function=by_nist,
+        )
+
+    def analyze_from_file(self, path: str) -> RiskReport:
+        """
+        Convenience method: load IAM config JSON from file and analyze.
+        """
+        with open(path, "r", encoding="utf-8") as f:
+            iam_config = json.load(f)
+        return self.analyze(iam_config)
