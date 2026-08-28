@@ -1,8 +1,0 @@
-# IAM Risk Analyzer - UI Application
-
-"""
-Main application file for the IAM Risk Analyzer UI.
-"""
-
-if __name__ == "__main__":
-    pass
