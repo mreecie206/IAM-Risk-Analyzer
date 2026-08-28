@@ -1,0 +1,61 @@
+{
+  "users": [
+    {
+      "user_id": "alice",
+      "is_admin": true,
+      "mfa_enabled": false
+    },
+    {
+      "user_id": "bob",
+      "is_admin": true,
+      "mfa_enabled": true
+    },
+    {
+      "user_id": "charlie",
+      "is_admin": false,
+      "mfa_enabled": false
+    }
+  ],
+  "access_keys": [
+    {
+      "key_id": "AKIA123",
+      "user_id": "alice",
+      "age_days": 120,
+      "active": true
+    },
+    {
+      "key_id": "AKIA456",
+      "user_id": "bob",
+      "age_days": 30,
+      "active": true
+    },
+    {
+      "key_id": "AKIA789",
+      "user_id": "charlie",
+      "age_days": 200,
+      "active": true
+    }
+  ],
+  "policies": [
+    {
+      "policy_id": "AdminPolicy",
+      "statements": [
+        {
+          "effect": "Allow",
+          "actions": ["*"],
+          "resources": ["*"]
+        }
+      ]
+    },
+    {
+      "policy_id": "ReadOnlyPolicy",
+      "statements": [
+        {
+          "effect": "Allow",
+          "actions": ["s3:GetObject"],
+          "resources": ["arn:aws:s3:::example-bucket/*"]
+        }
+      ]
+    }
+  ]
+}
